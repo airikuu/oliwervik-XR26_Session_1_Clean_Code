@@ -1,3 +1,4 @@
+// EnemyDamage.cs
 using UnityEngine;
 
 public class EnemyDamage : MonoBehaviour

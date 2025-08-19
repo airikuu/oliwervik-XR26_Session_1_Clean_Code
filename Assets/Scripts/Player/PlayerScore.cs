@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using System;
 
 public class PlayerScore : MonoBehaviour
 {
@@ -9,17 +10,20 @@ public class PlayerScore : MonoBehaviour
     [SerializeField]
     private TextMeshProUGUI scoreText;
 
+    public event Action<int> OnScoreChanged;
+
     private void Start()
     {
         UpdateScoreUI();
+        OnScoreChanged?.Invoke(score);
     }
 
     // Collecting collectibles (Monolithic, handles score and interaction)
-    // -> now handled by Collectible.cs instead of this script
     public void AddScore(int amount)
     {
         score += amount;
         UpdateScoreUI();
+        OnScoreChanged?.Invoke(score);
         Debug.Log("Collected! Score: " + score);
     }
 

@@ -1,4 +1,3 @@
-// HUDController.cs
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -9,9 +8,46 @@ public class HUDController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI timerText;
     [SerializeField] private GameObject gameOverPanel;
 
-    // Optional: if you want HUD to also show score/health
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private Slider healthBar;
+
+    [SerializeField] private PlayerScore playerScore;
+    [SerializeField] private PlayerHealth playerHealth;
+
+    private void Awake()
+    {
+        if (healthBar != null)
+        {
+            healthBar.maxValue = 30f;   // Set to match max health value
+        }
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(false);
+        }
+    }
+
+    private void OnEnable()
+    {
+        if (playerScore == null) playerScore = FindFirstObjectByType<PlayerScore>();
+        if (playerHealth == null) playerHealth = FindFirstObjectByType<PlayerHealth>();
+
+        if (playerScore != null) playerScore.OnScoreChanged += HandleScoreChanged;
+        if (playerHealth != null)
+        {
+            playerHealth.OnHealthChanged += HandleHealthChanged;
+            playerHealth.OnDied += HandlePlayerDied;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (playerScore != null) playerScore.OnScoreChanged -= HandleScoreChanged;
+        if (playerHealth != null)
+        {
+            playerHealth.OnHealthChanged -= HandleHealthChanged;
+            playerHealth.OnDied -= HandlePlayerDied;
+        }
+    }
 
     public void ShowStatus(string message)
     {
@@ -29,22 +65,21 @@ public class HUDController : MonoBehaviour
         if (gameOverPanel != null) gameOverPanel.SetActive(show);
     }
 
-    public void SetScore(int score)
+    private void HandleScoreChanged(int newScore)
     {
-        if (scoreText != null) scoreText.text = "Score: " + score;
+        if (scoreText != null)
+            scoreText.text = "Score: " + newScore;
     }
 
-    public void ConfigureHealthBar(float max, float current)
+    private void HandleHealthChanged(float value)
     {
         if (healthBar != null)
-        {
-            healthBar.maxValue = max;   // Set to match max health value
-            healthBar.value = current;  // Ensure current value matches
-        }
+            healthBar.value = value;
     }
 
-    public void SetHealth(float current)
+    private void HandlePlayerDied()
     {
-        if (healthBar != null) healthBar.value = current;
+        ShowStatus("GAME OVER!");
+        ShowGameOverPanel(true);
     }
 }

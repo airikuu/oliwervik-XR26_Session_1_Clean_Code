@@ -1,3 +1,4 @@
+// Collectible.cs
 using UnityEngine;
 
 public class Collectible : MonoBehaviour

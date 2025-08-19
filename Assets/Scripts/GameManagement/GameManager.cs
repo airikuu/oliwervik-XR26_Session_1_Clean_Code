@@ -1,26 +1,47 @@
-// GameManager.cs
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System;
 
 public class GameManager : MonoBehaviour
 {
+    public static GameManager Instance { get; private set; }
+
+    // Game state variables
     public bool gameOver = false;
     public float gameTime = 0f;
 
     [SerializeField] private int winScore = 30;
     [SerializeField] private float restartDelay = 2f;
 
+    // Tightly coupled dependency to Player (violating Separation of Concerns)
     [SerializeField] private PlayerScore playerScore;
-    [SerializeField] private GameTimer timer;
+
+    // UI elements directly managed by GameManager (tight coupling)
     [SerializeField] private HUDController hud;
 
+    [SerializeField] private GameTimer timer;
+
+    public event Action OnGameOver;
+    public event Action<int> OnWin;
+
     private string _sceneName;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
 
     void Start()
     {
         if (playerScore == null) playerScore = FindFirstObjectByType<PlayerScore>();
-        if (timer == null) timer = FindFirstObjectByType<GameTimer>();
         if (hud == null) hud = FindFirstObjectByType<HUDController>();
+        if (timer == null) timer = FindFirstObjectByType<GameTimer>();
 
         _sceneName = SceneManager.GetActiveScene().name;
 
@@ -37,51 +58,58 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if (gameOver) return;
-
-        if (timer != null)
+        if (!gameOver)
         {
-            gameTime = timer.Elapsed;
-            hud?.SetTimer(gameTime);
-        }
+            if (timer != null)
+            {
+                gameTime = timer.Elapsed;
+                hud?.SetTimer(gameTime);
+            }
 
-        if (playerScore != null && playerScore.GetScore() >= winScore)
-        {
-            WinGame();
+            // Win condition (tightly coupled)
+            if (playerScore != null && playerScore.GetScore() >= winScore) // Direct access to player score
+            {
+                WinGame();
+            }
         }
     }
 
     public void GameOver()
     {
-        if (gameOver) return;
+        if (!gameOver)
+        {
+            gameOver = true;
+            if (timer != null) timer.Stop();
 
-        gameOver = true;
-        timer?.Stop();
+            hud?.ShowStatus("GAME OVER!");
+            hud?.ShowGameOverPanel(true);
 
-        hud?.ShowStatus("GAME OVER!");
-        hud?.ShowGameOverPanel(true);
+            OnGameOver?.Invoke();
 
-        Invoke(nameof(RestartGame), restartDelay);
+            Invoke(nameof(RestartGame), restartDelay); // Restart after 2 seconds
+        }
     }
 
     public void WinGame()
     {
-        if (gameOver) return;
+        if (!gameOver) // Ensure win can only happen once
+        {
+            gameOver = true;
+            int finalScore = playerScore != null ? playerScore.GetScore() : 0;
+            if (timer != null) timer.Stop();
 
-        gameOver = true;
-        int finalScore = playerScore != null ? playerScore.GetScore() : 0;
-        timer?.Stop();
+            hud?.ShowStatus("YOU WIN! Score: " + finalScore);
+            hud?.ShowGameOverPanel(true);
 
-        hud?.ShowStatus("YOU WIN! Score: " + finalScore);
-        hud?.ShowGameOverPanel(true);
+            OnWin?.Invoke(finalScore);
 
-        Invoke(nameof(RestartGame), restartDelay);
+            Invoke(nameof(RestartGame), restartDelay); // Restart after 2 seconds
+        }
     }
 
     public void RestartGame()
     {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(_sceneName);
+        Time.timeScale = 1f; // Resume game
+        SceneManager.LoadScene(_sceneName); // Reload current scene
     }
 }
-
